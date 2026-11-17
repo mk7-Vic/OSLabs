@@ -48,6 +48,7 @@ def ask_number(prompt, minimum, maximum):
         print(f"Please enter a whole number from {minimum} to {maximum}.")
 
 
+
 def bitmap_demo(bitmap):
     heading("1. BITMAP: ALLOCATION AND RELEASE")
 
@@ -55,41 +56,52 @@ def bitmap_demo(bitmap):
     print("For this demonstration: 0 = FREE, 1 = ALLOCATED.")
     show_bitmap(bitmap)
 
-    needed = ask_number(
-        "\nCLASS CHALLENGE: How many consecutive blocks does the new file need? (1-4): ",
-        1, 4
-    )
+    # Keep asking until a valid allocation can be made.
+    while True:
+        needed = ask_number(
+            "\nCLASS CHALLENGE: How many consecutive blocks does the new file need? (1-4): ",
+            1, 4
+        )
 
-    print(f"\nSearching for {needed} consecutive free blocks...")
-    selected = find_free_run(bitmap, needed)
+        print(f"\nSearching for {needed} consecutive free blocks...")
+        selected = find_free_run(bitmap, needed)
 
-    if selected is None:
-        print("No suitable consecutive free run was found.")
-        print("The requested allocation cannot be made in this example.")
-    else:
-        print(f"Found consecutive free blocks: {selected}")
-        for block in selected:
-            bitmap[block] = True
+        if selected is None:
+            print(f"\nERROR: No {needed} consecutive free blocks are available.")
+            print("Please try again with a different number.")
+            continue
 
-        print("Allocation successful. Their bitmap bits change from 0 to 1.")
-        show_bitmap(bitmap)
-        show_disk(bitmap)
+        # A suitable consecutive run has been found.
+        break
 
-        print("\nNOW DEMONSTRATING RELEASE")
-        print(f"The file is deleted, releasing blocks {selected}.")
-        for released_block in selected:
-            bitmap[released_block] = False
-            print(
-                f"Block {released_block} changes from "
-                "1 (allocated) to 0 (free)."
-            )
-        show_bitmap(bitmap)
-        show_disk(bitmap)
+    print(f"\nSUCCESS: Found consecutive free blocks: {selected}")
+
+    for block in selected:
+        bitmap[block] = True
+
+    print("Allocation successful. Their bitmap bits change from 0 to 1.")
+    show_bitmap(bitmap)
+    show_disk(bitmap)
+
+    print("\nNOW DEMONSTRATING RELEASE")
+    print(f"The file is deleted, releasing blocks {selected}.")
+
+    for released_block in selected:
+        bitmap[released_block] = False
+        print(
+            f"Block {released_block} changes from "
+            "1 (allocated) to 0 (free)."
+        )
+
+    show_bitmap(bitmap)
+    show_disk(bitmap)
 
     print("\nTRADE-OFF")
     print("Bitmap: compact representation and easy status checking.")
     print("However, finding a long consecutive run may require scanning bits.")
+
     pause()
+
 
 
 def linked_list_demo(bitmap):
@@ -174,6 +186,7 @@ def get_free_runs(bitmap):
     return runs
 
 
+
 def counting_demo(bitmap):
     heading("4. COUNTING: CONSECUTIVE FREE-BLOCK RECORDS")
 
@@ -191,17 +204,31 @@ def counting_demo(bitmap):
 
     print("\nCLASS QUESTION")
     print("What does the record (20, 5) represent?")
-    answer = input("Your answer: ").strip().lower()
+    print("Enter the five block numbers or the range 20-24.")
 
-    if "20" in answer and "24" in answer:
-        print("Correct: blocks 20, 21, 22, 23 and 24.")
-    else:
-        print("Answer: blocks 20, 21, 22, 23 and 24.")
+    while True:
+        answer = input("Your answer: ").strip()
+
+        numbers = [
+            int(part)
+            for part in answer.replace(",", " ").replace("-", " ").split()
+            if part.isdigit()
+        ]
+
+        if numbers in ([20, 21, 22, 23, 24], [20, 24]):
+            print("Correct! Blocks 20, 21, 22, 23 and 24.")
+            break
+
+        print("Not quite. Remember: 20 is the starting block")
+        print("and 5 is the number of consecutive blocks.")
+        print("Please try again.")
 
     print("\nTRADE-OFF")
     print("Counting is compact when free blocks occur in long consecutive runs.")
     print("It is less compact when free space is highly fragmented.")
     pause()
+
+
 
 
 def free_space_comparison():
@@ -218,15 +245,30 @@ def free_space_comparison():
          "Less effective with fragmentation"),
     ]
 
-    print(f"{'METHOD':<13} {'HOW IT STORES SPACE':<29} {'ADVANTAGE':<27} LIMITATION")
+    print(f"{'METHOD':<13} {'HOW IT STORES SPACE':<29}{'ADVANTAGE':<27} LIMITATION")
     print("-" * 110)
+
     for method, storage, advantage, limitation in rows:
         print(f"{method:<13} {storage:<29} {advantage:<27} {limitation}")
 
     print("\nCLASS QUESTION")
-    print("Which method would be compact when free space occurs in long runs?")
-    print("Expected answer: Counting.")
+    print("Which method is particularly compact when free space")
+    print("occurs in long consecutive runs?")
+
+    while True:
+        answer = input("Your answer: ").strip().lower()
+
+        if answer in ("counting", "counting method"):
+            print("Correct! Counting stores a starting block and a run length.")
+            break
+
+        print("Not quite. Think about the method that records a starting")
+        print("block and the number of consecutive free blocks.")
+        print("Please try again.")
+
     pause()
+
+
 
 
 def crash_challenge(bitmap):
@@ -254,18 +296,27 @@ def crash_challenge(bitmap):
     print("B. A file references a block marked allocated.")
     print("C. The bitmap and file metadata agree.")
 
-    answer = input("\nChoose A, B or C: ").strip().upper()
+    while True:
+        answer = input("\nChoose A, B or C: ").strip().upper()
 
-    if answer == "A":
-        print("Correct. The file references a block marked as free.")
-    else:
-        print("The correct answer is A.")
+        if answer not in ("A", "B", "C"):
+            print("Invalid choice. Please enter A, B or C.")
+            continue
+
+        if answer == "A":
+            print("Correct! The file references a block marked as free.")
+            break
+
+        print("Not quite. Check the file metadata against the bitmap.")
+        print("Remember, block 15 is referenced by a file but marked FREE.")
+        print("Please try again.")
 
     print("\nThis mismatch can cause the same block to be allocated again")
     print("while an existing file still references it.")
     pause()
 
     return file_references
+
 
 
 def consistency_check(bitmap, file_references):
@@ -368,7 +419,7 @@ def main():
     heading("GROUP 10: FILESYSTEM SIMULATION")
     print("Scenario: University server storing student assignments.")
     print("Disk size: 16 blocks.")
-    print("This is an educational model; it does not modify real disk data.")
+    print("this is just a simulation; it does not modify real disk data.")
     show_disk(bitmap)
     pause()
 
